@@ -4,21 +4,25 @@ import { SignIn } from "./components/SignIn";
 import { AddWordForm } from "./components/AddWordForm";
 import { FlashcardPractice } from "./components/FlashcardPractice";
 import { StatsDashboard } from "./components/StatsDashboard";
+import { Navbar } from "./components/Navbar";
 
 export default function App() {
   const [user] = useAuthState(auth);
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Fluency App</h1>
-      <SignIn user={user} />
-      {user && (
-        <>
-          <StatsDashboard />
-          <AddWordForm />
-          <FlashcardPractice />
-        </>
-      )}
-    </div>
+    <>
+      <Navbar user={user} />
+      <div style={{ padding: 20 }}>
+        {!user ? (
+          <SignIn user={user} />
+        ) : (
+          <>
+            <StatsDashboard />
+            <AddWordForm />
+            <FlashcardPractice />
+          </>
+        )}
+      </div>
+    </>
   );
 }
