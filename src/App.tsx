@@ -3,6 +3,7 @@ import { auth } from "./firebase";
 import { SignIn } from "./components/SignIn";
 import { AddWordForm } from "./components/AddWordForm";
 import { FlashcardPractice } from "./components/FlashcardPractice";
+import { StatsDashboard } from "./components/StatsDashboard";
 
 export default function App() {
   const [user] = useAuthState(auth);
@@ -13,6 +14,7 @@ export default function App() {
       <SignIn user={user} />
       {user && (
         <>
+          <StatsDashboard />
           <AddWordForm />
           <FlashcardPractice />
         </>
