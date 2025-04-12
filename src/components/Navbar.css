@@ -3,21 +3,38 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    background-color: #2c2c2c;
+    background: #2c2c2c;
     color: white;
     position: sticky;
     top: 0;
     z-index: 100;
   }
   
-  .navbar-title {
-    font-size: 1.25rem;
-    font-weight: bold;
+  /* Align hamburger and title horizontally */
+  .navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
   
+  .navbar-title {
+    font-weight: bold;
+    font-size: 1.2rem;
+    white-space: nowrap;
+  }
+  
+  .hamburger {
+    display: inline-block;
+    font-size: 1.5rem;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+  }
+  
+  /* Profile dropdown */
   .profile-container {
     position: relative;
-    display: inline-block;
   }
   
   .profile-pic {
@@ -29,33 +46,27 @@
   
   .dropdown {
     position: absolute;
-    right: 0;
     top: 50px;
+    right: 0;
     background: white;
     color: black;
     border: 1px solid #ccc;
     border-radius: 6px;
-    padding: 0.5rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     min-width: 200px;
+    padding: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
   }
   
   .dropdown-item {
     padding: 0.5rem;
-    cursor: default;
+    text-align: left;
   }
   
   .dropdown-item.logout {
-    cursor: pointer;
-    background-color: #eee;
+    background: #eee;
     border: none;
     width: 100%;
-    text-align: left;
-    padding: 0.5rem;
+    cursor: pointer;
     margin-top: 0.5rem;
-  }
-  
-  .dropdown-item.logout:hover {
-    background-color: #ddd;
   }
   
