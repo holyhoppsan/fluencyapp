@@ -4,7 +4,7 @@ export const Sidebar = () => {
   return (
     <aside className="sidebar">
       <nav>
-        <NavLink to="/" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+        <NavLink to="/home" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
           Home
         </NavLink>
         <NavLink to="/practice" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
