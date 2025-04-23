@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
 import Home from "../routes/Home";
@@ -19,7 +19,8 @@ export const Layout = ({ user }: { user: any }) => {
         <Sidebar />
         <main className="app-content">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Navigate to="/home" />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/practice" element={<Practice />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="/profile" element={<Profile />} />
