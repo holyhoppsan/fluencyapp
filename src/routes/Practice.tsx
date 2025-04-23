@@ -3,7 +3,13 @@ import { PracticeSetup, PracticeOptions } from "../components/PracticeSetup";
 import { FlashcardPractice } from "../components/FlashcardPractice";
 import { WordEntry } from "../types";
 import { db, auth } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  writeBatch,
+} from "firebase/firestore";
 
 export default function Practice() {
   const [options, setOptions] = useState<PracticeOptions | null>(null);
@@ -24,18 +30,61 @@ export default function Practice() {
         ...doc.data(),
       })) as WordEntry[];
 
-      // TODO: Replace with spaced repetition logic
-      const shuffled = allWords.sort(() => Math.random() - 0.5);
+      const now = Date.now();
+      const scoredWords = allWords.map((word) => {
+        const lastSeen = word.lastSeen || 0;
+        const correctCount = word.correctCount || 0;
+        const score = (now - lastSeen) / (1 + correctCount);
+        return { ...word, srScore: score };
+      });
+
+      const sorted = scoredWords.sort((a, b) => b.srScore - a.srScore);
+
       const selected =
         options.mode === "word-count"
-          ? shuffled.slice(0, options.count)
-          : shuffled;
+          ? sorted.slice(0, options.count)
+          : sorted;
 
       setWords(selected);
     };
 
     fetchWords();
   }, [options]);
+
+  const handleSessionComplete = async (
+    finalScore: number,
+    seenWords: WordEntry[],
+    correctWords: string[]
+  ) => {
+    setScore(finalScore);
+    setComplete(true);
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const batch = writeBatch(db);
+    const now = Date.now();
+
+    seenWords.forEach((word) => {
+      if (!word.id) {
+        console.warn("Skipping update for word with missing ID", word);
+        return;
+      }
+
+      const ref = doc(db, "users", user.uid, "words", word.id);
+      const updates: Partial<WordEntry> = {
+        lastSeen: now,
+      };
+
+      if (correctWords.includes(word.id)) {
+        updates.correctCount = (word.correctCount || 0) + 1;
+      }
+
+      batch.update(ref, updates);
+    });
+
+    await batch.commit();
+  };
 
   if (!options) {
     return <PracticeSetup onStart={setOptions} />;
@@ -68,10 +117,9 @@ export default function Practice() {
       <FlashcardPractice
         words={words}
         options={options}
-        onComplete={(finalScore: number) => {
-          setScore(finalScore);
-          setComplete(true);
-        }}
+        onComplete={(finalScore, seenWords, correctWords) =>
+          handleSessionComplete(finalScore, seenWords, correctWords)
+        }
       />
     </div>
   );

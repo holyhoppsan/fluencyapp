@@ -7,7 +7,7 @@ type WordWithDirection = WordEntry & { direction: "es-en" | "en-es" };
 type Props = {
   words: WordEntry[];
   options: PracticeOptions;
-  onComplete: (score: number) => void;
+  onComplete: (score: number, seenWords: WordEntry[], correctIds: string[]) => void;
 };
 
 export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
@@ -29,6 +29,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [input, setInput] = useState("");
   const [score, setScore] = useState(0);
+  const [correctWordIds, setCorrectWordIds] = useState<string[]>([]);
   const [showAnswer, setShowAnswer] = useState(false);
   const [timeLeft, setTimeLeft] = useState(
     options.mode === "timed" ? options.count * 60 : 0
@@ -42,7 +43,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            onComplete(score);
+            onComplete(score, sessionWords, correctWordIds);
             return 0;
           }
           return prev - 1;
@@ -50,7 +51,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [options, score, onComplete]);
+  }, [options, score, correctWordIds, onComplete]);
 
   const getPrompt = () => {
     return currentWord.direction === "es-en"
@@ -68,7 +69,12 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
     const correctAnswers = getAnswer().toLowerCase().split("|").map((s) => s.trim());
     const userAnswer = input.trim().toLowerCase();
     const isCorrect = correctAnswers.includes(userAnswer);
-    if (isCorrect) setScore((prev) => prev + 1);
+    if (isCorrect) {
+      const id = currentWord.id;
+      if (!id) return; // ✅ Type guard ensures id is a string
+      setScore((prev) => prev + 1);
+      setCorrectWordIds((prev) => [...prev, id]);
+    }
     setShowAnswer(true);
   };
 
@@ -78,7 +84,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
     const nextIndex = currentIndex + 1;
 
     if (nextIndex >= sessionWords.length) {
-      onComplete(score);
+      onComplete(score, sessionWords, correctWordIds);
     } else {
       setCurrentIndex(nextIndex);
     }
@@ -89,7 +95,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
   }
 
   if (!currentWord) {
-    return null; // We now end session with onComplete(), so this should never render
+    return null; // onComplete will handle exiting the session
   }
 
   return (
