@@ -5,7 +5,6 @@ export const Sidebar = () => {
   const location = useLocation();
   const [statsExpanded, setStatsExpanded] = useState(false);
 
-  // Expand Stats submenu if any stats route is active
   useEffect(() => {
     if (location.pathname.startsWith("/stats")) {
       setStatsExpanded(true);
@@ -23,6 +22,10 @@ export const Sidebar = () => {
           Practice
         </NavLink>
 
+        <NavLink to="/vocabulary" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+          Vocabulary
+        </NavLink>
+
         <div className="nav-group">
           <div
             className={`nav-item nav-collapsible ${statsExpanded ? "expanded" : ""}`}
@@ -38,19 +41,9 @@ export const Sidebar = () => {
               >
                 Your Progress
               </NavLink>
-              <NavLink
-                to="/stats/vocabulary"
-                className={({ isActive }) => isActive ? "nav-item sub-item active" : "nav-item sub-item"}
-              >
-                Vocabulary
-              </NavLink>
             </div>
           )}
         </div>
-
-        <NavLink to="/add" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-          Add Word
-        </NavLink>
 
         <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
           Profile

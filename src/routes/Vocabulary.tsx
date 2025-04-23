@@ -4,9 +4,10 @@ import {
   getDocs,
   updateDoc,
   doc,
+  addDoc,
 } from "firebase/firestore";
-import { db, auth } from "../../firebase";
-import { WordEntry } from "../../types";
+import { db, auth } from "../firebase";
+import { WordEntry } from "../types";
 
 export default function Vocabulary() {
   const [words, setWords] = useState<WordEntry[]>([]);
@@ -14,22 +15,25 @@ export default function Vocabulary() {
   const [editedEnglish, setEditedEnglish] = useState("");
   const [editedSpanish, setEditedSpanish] = useState("");
 
+  const [newEnglish, setNewEnglish] = useState("");
+  const [newSpanish, setNewSpanish] = useState("");
+
   useEffect(() => {
-    const fetchWords = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const snapshot = await getDocs(collection(db, "users", user.uid, "words"));
-      const entries: WordEntry[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      })) as WordEntry[];
-
-      setWords(entries);
-    };
-
     fetchWords();
   }, []);
+
+  const fetchWords = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const snapshot = await getDocs(collection(db, "users", user.uid, "words"));
+    const entries: WordEntry[] = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as WordEntry[];
+
+    setWords(entries);
+  };
 
   const startEdit = (word: WordEntry) => {
     setEditWordId(word.id || null);
@@ -45,21 +49,51 @@ export default function Vocabulary() {
     const wordRef = doc(db, "users", user.uid, "words", editWordId);
     await updateDoc(wordRef, {
       english: editedEnglish,
-      spanish: editedSpanish
+      spanish: editedSpanish,
     });
 
-    setWords(words.map(w =>
-      w.id === editWordId
-        ? { ...w, english: editedEnglish, spanish: editedSpanish }
-        : w
-    ));
-
+    await fetchWords();
     setEditWordId(null);
+  };
+
+  const addWord = async () => {
+    const user = auth.currentUser;
+    if (!user || !newEnglish || !newSpanish) return;
+
+    const userWordsRef = collection(db, "users", user.uid, "words");
+
+    await addDoc(userWordsRef, {
+      english: newEnglish,
+      spanish: newSpanish,
+      correctCount: 0,
+      lastSeen: Date.now(),
+    });
+
+    setNewEnglish("");
+    setNewSpanish("");
+    await fetchWords();
   };
 
   return (
     <div>
-      <h3>Your Vocabulary</h3>
+      <h2>Vocabulary</h2>
+
+      <h3>Add New Word</h3>
+      <div style={{ marginBottom: "1rem" }}>
+        <input
+          value={newEnglish}
+          onChange={(e) => setNewEnglish(e.target.value)}
+          placeholder="English"
+        />
+        <input
+          value={newSpanish}
+          onChange={(e) => setNewSpanish(e.target.value)}
+          placeholder="Spanish"
+        />
+        <button onClick={addWord}>Add Word</button>
+      </div>
+
+      <h3>Your Words</h3>
       <table>
         <thead>
           <tr>
@@ -69,13 +103,13 @@ export default function Vocabulary() {
           </tr>
         </thead>
         <tbody>
-          {words.map(word => (
+          {words.map((word) => (
             <tr key={word.id}>
               <td>
                 {editWordId === word.id ? (
                   <input
                     value={editedEnglish}
-                    onChange={e => setEditedEnglish(e.target.value)}
+                    onChange={(e) => setEditedEnglish(e.target.value)}
                   />
                 ) : (
                   word.english
@@ -85,7 +119,7 @@ export default function Vocabulary() {
                 {editWordId === word.id ? (
                   <input
                     value={editedSpanish}
-                    onChange={e => setEditedSpanish(e.target.value)}
+                    onChange={(e) => setEditedSpanish(e.target.value)}
                   />
                 ) : (
                   word.spanish

@@ -5,10 +5,9 @@ import { Sidebar } from "./Sidebar";
 import Home from "../routes/Home";
 import Practice from "../routes/Practice";
 import Profile from "../routes/Profile";
-import AddWord from "../routes/AddWord";
+import Vocabulary from "../routes/Vocabulary";
 import StatsLayout from "../routes/stats/StatsLayout";
 import StatsProgress from "../routes/stats/StatsProgress";
-import Vocabulary from "../routes/stats/Vocabulary";
 import "./Navbar.css";
 import "./Layout.css";
 
@@ -25,14 +24,12 @@ export const Layout = ({ user }: { user: any }) => {
             <Route path="/" element={<Navigate to="/home" />} />
             <Route path="/home" element={<Home />} />
             <Route path="/practice" element={<Practice />} />
-            <Route path="/add" element={<AddWord />} />
+            <Route path="/vocabulary" element={<Vocabulary />} />
             <Route path="/profile" element={<Profile />} />
 
-            {/* 🔽 Nested stats routes */}
             <Route path="/stats" element={<StatsLayout />}>
               <Route index element={<Navigate to="progress" />} />
               <Route path="progress" element={<StatsProgress />} />
-              <Route path="vocabulary" element={<Vocabulary />} />
             </Route>
           </Routes>
         </main>
