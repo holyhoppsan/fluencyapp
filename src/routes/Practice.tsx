@@ -7,7 +7,6 @@ import {
   collection,
   getDocs,
   doc,
-  updateDoc,
   writeBatch,
 } from "firebase/firestore";
 

@@ -31,6 +31,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
   const [score, setScore] = useState(0);
   const [correctWordIds, setCorrectWordIds] = useState<string[]>([]);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [wasCorrect, setWasCorrect] = useState<boolean | null>(null);
   const [timeLeft, setTimeLeft] = useState(
     options.mode === "timed" ? options.count * 60 : 0
   );
@@ -69,18 +70,23 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
     const correctAnswers = getAnswer().toLowerCase().split("|").map((s) => s.trim());
     const userAnswer = input.trim().toLowerCase();
     const isCorrect = correctAnswers.includes(userAnswer);
+
+    setWasCorrect(isCorrect);
+
     if (isCorrect) {
       const id = currentWord.id;
-      if (!id) return; // ✅ Type guard ensures id is a string
+      if (!id) return;
       setScore((prev) => prev + 1);
       setCorrectWordIds((prev) => [...prev, id]);
     }
+
     setShowAnswer(true);
   };
 
   const next = () => {
     setInput("");
     setShowAnswer(false);
+    setWasCorrect(null);
     const nextIndex = currentIndex + 1;
 
     if (nextIndex >= sessionWords.length) {
@@ -123,8 +129,14 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
         </>
       ) : (
         <>
+          <h4 style={{ color: wasCorrect ? "green" : "red" }}>
+            {wasCorrect ? "✅ Correct!" : "❌ Incorrect"}
+          </h4>
           <p>
-            Correct answer: <strong>{getAnswer()}</strong>
+            <strong>Your answer:</strong> {input || "(blank)"}
+          </p>
+          <p>
+            <strong>Correct answer:</strong> {getAnswer()}
           </p>
           <button onClick={next}>Next</button>
         </>
