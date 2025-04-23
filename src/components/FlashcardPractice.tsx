@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WordEntry } from "../types";
 import { PracticeOptions } from "./PracticeSetup";
 
@@ -7,12 +7,15 @@ type WordWithDirection = WordEntry & { direction: "es-en" | "en-es" };
 type Props = {
   words: WordEntry[];
   options: PracticeOptions;
-  onComplete: () => void;
+  onComplete: (score: number) => void;
 };
 
 export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
-  const initializeWords = () => {
-    return words.map((word) => {
+  const sessionWords: WordWithDirection[] = useMemo(() => {
+    const count = Math.min(options.count, words.length);
+    const limitedWords = options.mode === "word-count" ? words.slice(0, count) : words;
+
+    return limitedWords.map((word) => {
       let direction: "es-en" | "en-es";
       if (options.direction === "random") {
         direction = Math.random() > 0.5 ? "es-en" : "en-es";
@@ -21,9 +24,8 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
       }
       return { ...word, direction };
     });
-  };
+  }, [words, options]);
 
-  const [sessionWords] = useState<WordWithDirection[]>(initializeWords());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [input, setInput] = useState("");
   const [score, setScore] = useState(0);
@@ -40,7 +42,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            onComplete();
+            onComplete(score);
             return 0;
           }
           return prev - 1;
@@ -48,7 +50,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [options]);
+  }, [options, score, onComplete]);
 
   const getPrompt = () => {
     return currentWord.direction === "es-en"
@@ -75,15 +77,19 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
     setShowAnswer(false);
     const nextIndex = currentIndex + 1;
 
-    if (options.mode === "word-count" && nextIndex >= options.count) {
-      onComplete();
+    if (nextIndex >= sessionWords.length) {
+      onComplete(score);
     } else {
       setCurrentIndex(nextIndex);
     }
   };
 
+  if (!sessionWords.length) {
+    return <div>No words available for practice.</div>;
+  }
+
   if (!currentWord) {
-    return <div>✅ Session complete! Score: {score}/{sessionWords.length}</div>;
+    return null; // We now end session with onComplete(), so this should never render
   }
 
   return (

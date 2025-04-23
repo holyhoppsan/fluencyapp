@@ -9,6 +9,7 @@ export default function Practice() {
   const [options, setOptions] = useState<PracticeOptions | null>(null);
   const [words, setWords] = useState<WordEntry[]>([]);
   const [complete, setComplete] = useState(false);
+  const [score, setScore] = useState<number>(0);
 
   useEffect(() => {
     if (!options) return;
@@ -23,7 +24,7 @@ export default function Practice() {
         ...doc.data(),
       })) as WordEntry[];
 
-      // TODO: Replace this with spaced repetition ranking
+      // TODO: Replace with spaced repetition logic
       const shuffled = allWords.sort(() => Math.random() - 0.5);
       const selected =
         options.mode === "word-count"
@@ -36,20 +37,27 @@ export default function Practice() {
     fetchWords();
   }, [options]);
 
-  if (!options) return <PracticeSetup onStart={setOptions} />;
+  if (!options) {
+    return <PracticeSetup onStart={setOptions} />;
+  }
 
   if (complete) {
     return (
       <div>
-        ✅ Practice Complete!
+        <h2>✅ Practice Complete!</h2>
+        <p>
+          You scored <strong>{score}</strong> out of{" "}
+          <strong>{words.length}</strong>
+        </p>
         <button
           onClick={() => {
             setOptions(null);
-            setComplete(false);
             setWords([]);
+            setScore(0);
+            setComplete(false);
           }}
         >
-          Start New
+          Start New Session
         </button>
       </div>
     );
@@ -57,11 +65,14 @@ export default function Practice() {
 
   return (
     <div>
-      {words.length > 0 ? (
-        <FlashcardPractice words={words} options={options} onComplete={() => setComplete(true)} />
-      ) : (
-        <p>Loading words...</p>
-      )}
+      <FlashcardPractice
+        words={words}
+        options={options}
+        onComplete={(finalScore: number) => {
+          setScore(finalScore);
+          setComplete(true);
+        }}
+      />
     </div>
   );
 }
