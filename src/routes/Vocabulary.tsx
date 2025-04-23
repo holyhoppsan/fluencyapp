@@ -2,43 +2,43 @@ import { useEffect, useState } from "react";
 import { db, auth } from "../firebase";
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { WordEntry } from "../types";
-import AddWordForm from "../components/AddWordForm"; // ✅ updated to match default export
+import AddWordForm from "../components/AddWordForm";
 
 export default function Vocabulary() {
-  const [words, setWords] = useState<(WordEntry & { srScore: number })[]>([]);
+  const [words, setWords] = useState<(WordEntry & { id: string; srScore: number })[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editEnglish, setEditEnglish] = useState("");
   const [editSpanish, setEditSpanish] = useState("");
 
+  const fetchWords = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const snapshot = await getDocs(collection(db, "users", user.uid, "words"));
+    const now = Date.now();
+
+    const loadedWords = snapshot.docs.map((docSnap) => {
+      const data = docSnap.data() as WordEntry;
+      const lastSeen = data.lastSeen || 0;
+      const correctCount = data.correctCount || 0;
+      const srScore = (now - lastSeen) / (1 + correctCount);
+      return {
+        ...data,
+        id: docSnap.id,
+        srScore,
+      } as WordEntry & { id: string; srScore: number }; // ✅ enforce id as string
+    });
+
+    setWords(loadedWords);
+  };
+
   useEffect(() => {
-    const fetchWords = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const snapshot = await getDocs(collection(db, "users", user.uid, "words"));
-      const now = Date.now();
-
-      const loadedWords = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as WordEntry;
-        const lastSeen = data.lastSeen || 0;
-        const correctCount = data.correctCount || 0;
-        const srScore = (now - lastSeen) / (1 + correctCount);
-        return {
-          ...data,
-          id: docSnap.id,
-          srScore,
-        };
-      });
-
-      setWords(loadedWords);
-    };
-
     fetchWords();
   }, []);
 
   const handleEdit = async (id: string) => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || !id) return;
 
     const ref = doc(db, "users", user.uid, "words", id);
     await updateDoc(ref, {
@@ -60,7 +60,7 @@ export default function Vocabulary() {
   return (
     <div>
       <h2>Add / Edit Vocabulary</h2>
-      <AddWordForm />
+      <AddWordForm onWordAdded={fetchWords} />
       <h3 style={{ marginTop: "2rem" }}>Your Words</h3>
       <table>
         <thead>

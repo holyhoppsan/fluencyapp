@@ -2,7 +2,7 @@ import { useState } from "react";
 import { db, auth } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
 
-export default function AddWordForm() {
+export default function AddWordForm({ onWordAdded }: { onWordAdded?: () => void }) {
   const [english, setEnglish] = useState("");
   const [spanish, setSpanish] = useState("");
 
@@ -21,6 +21,8 @@ export default function AddWordForm() {
 
     setEnglish("");
     setSpanish("");
+
+    if (onWordAdded) onWordAdded(); // ✅ trigger refresh in parent
   };
 
   return (
