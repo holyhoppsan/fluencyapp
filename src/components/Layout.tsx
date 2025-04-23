@@ -4,8 +4,10 @@ import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
 import Home from "../routes/Home";
 import Practice from "../routes/Practice";
-import Stats from "../routes/Stats";
 import Profile from "../routes/Profile";
+import Vocabulary from "../routes/Vocabulary";
+import StatsLayout from "../routes/stats/StatsLayout";
+import StatsProgress from "../routes/stats/StatsProgress";
 import "./Navbar.css";
 import "./Layout.css";
 
@@ -22,8 +24,13 @@ export const Layout = ({ user }: { user: any }) => {
             <Route path="/" element={<Navigate to="/home" />} />
             <Route path="/home" element={<Home />} />
             <Route path="/practice" element={<Practice />} />
-            <Route path="/stats" element={<Stats />} />
+            <Route path="/vocabulary" element={<Vocabulary />} />
             <Route path="/profile" element={<Profile />} />
+
+            <Route path="/stats" element={<StatsLayout />}>
+              <Route index element={<Navigate to="progress" />} />
+              <Route path="progress" element={<StatsProgress />} />
+            </Route>
           </Routes>
         </main>
       </div>

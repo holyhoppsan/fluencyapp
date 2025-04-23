@@ -1,73 +1,133 @@
-import { useEffect, useState } from "react";
-import {
-  collection,
-  getDocs,
-  updateDoc,
-  doc
-} from "firebase/firestore";
-import { db, auth } from "../firebase";
+import { useEffect, useMemo, useState } from "react";
 import { WordEntry } from "../types";
+import { PracticeOptions } from "./PracticeSetup";
 
-export const FlashcardPractice = () => {
-  const [words, setWords] = useState<WordEntry[]>([]);
-  const [current, setCurrent] = useState<WordEntry | null>(null);
-  const [guess, setGuess] = useState("");
-  const [feedback, setFeedback] = useState("");
+type WordWithDirection = WordEntry & { direction: "es-en" | "en-es" };
+
+type Props = {
+  words: WordEntry[];
+  options: PracticeOptions;
+  onComplete: (score: number, seenWords: WordEntry[], correctIds: string[]) => void;
+};
+
+export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
+  const sessionWords: WordWithDirection[] = useMemo(() => {
+    const count = Math.min(options.count, words.length);
+    const limitedWords = options.mode === "word-count" ? words.slice(0, count) : words;
+
+    return limitedWords.map((word) => {
+      let direction: "es-en" | "en-es";
+      if (options.direction === "random") {
+        direction = Math.random() > 0.5 ? "es-en" : "en-es";
+      } else {
+        direction = options.direction;
+      }
+      return { ...word, direction };
+    });
+  }, [words, options]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [input, setInput] = useState("");
+  const [score, setScore] = useState(0);
+  const [correctWordIds, setCorrectWordIds] = useState<string[]>([]);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(
+    options.mode === "timed" ? options.count * 60 : 0
+  );
+
+  const currentWord = sessionWords[currentIndex];
 
   useEffect(() => {
-    const fetchWords = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const snapshot = await getDocs(
-        collection(db, "users", user.uid, "words")
-      );
-
-      const entries: WordEntry[] = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      })) as WordEntry[];
-
-      setWords(entries);
-      setCurrent(entries[Math.floor(Math.random() * entries.length)]);
-    };
-
-    fetchWords();
-  }, []);
-
-  const checkAnswer = async () => {
-    if (!current) return;
-    if (guess.toLowerCase().trim() === current.spanish.toLowerCase()) {
-      setFeedback("✅ Correct!");
-
-      const ref = doc(db, "users", auth.currentUser!.uid, "words", current.id!);
-      await updateDoc(ref, {
-        correctCount: current.correctCount + 1,
-        lastSeen: Date.now()
-      });
-    } else {
-      setFeedback(`❌ Wrong! Correct answer: ${current.spanish}`);
+    if (options.mode === "timed") {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            onComplete(score, sessionWords, correctWordIds);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
     }
+  }, [options, score, correctWordIds, onComplete]);
 
-    setGuess("");
-    const next = words[Math.floor(Math.random() * words.length)];
-    setCurrent(next);
+  const getPrompt = () => {
+    return currentWord.direction === "es-en"
+      ? currentWord.spanish
+      : currentWord.english;
   };
+
+  const getAnswer = () => {
+    return currentWord.direction === "es-en"
+      ? currentWord.english
+      : currentWord.spanish;
+  };
+
+  const checkAnswer = () => {
+    const correctAnswers = getAnswer().toLowerCase().split("|").map((s) => s.trim());
+    const userAnswer = input.trim().toLowerCase();
+    const isCorrect = correctAnswers.includes(userAnswer);
+    if (isCorrect) {
+      const id = currentWord.id;
+      if (!id) return; // ✅ Type guard ensures id is a string
+      setScore((prev) => prev + 1);
+      setCorrectWordIds((prev) => [...prev, id]);
+    }
+    setShowAnswer(true);
+  };
+
+  const next = () => {
+    setInput("");
+    setShowAnswer(false);
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex >= sessionWords.length) {
+      onComplete(score, sessionWords, correctWordIds);
+    } else {
+      setCurrentIndex(nextIndex);
+    }
+  };
+
+  if (!sessionWords.length) {
+    return <div>No words available for practice.</div>;
+  }
+
+  if (!currentWord) {
+    return null; // onComplete will handle exiting the session
+  }
 
   return (
     <div>
-      <h2>Practice Mode</h2>
-      {current && (
+      {options.mode === "timed" && (
         <div>
-          <p>Translate: <strong>{current.english}</strong></p>
+          ⏱ Time Left: {Math.floor(timeLeft / 60)}:
+          {String(timeLeft % 60).padStart(2, "0")}
+        </div>
+      )}
+
+      <h3>Translate:</h3>
+      <div style={{ fontSize: "1.5rem", margin: "1rem 0" }}>
+        <strong>{getPrompt()}</strong>
+      </div>
+
+      {!showAnswer ? (
+        <>
           <input
-            value={guess}
-            onChange={(e) => setGuess(e.target.value)}
-            placeholder="Type in Spanish"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Your answer"
           />
           <button onClick={checkAnswer}>Check</button>
-          <p>{feedback}</p>
-        </div>
+        </>
+      ) : (
+        <>
+          <p>
+            Correct answer: <strong>{getAnswer()}</strong>
+          </p>
+          <button onClick={next}>Next</button>
+        </>
       )}
     </div>
   );

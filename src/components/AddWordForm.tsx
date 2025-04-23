@@ -1,42 +1,47 @@
 import { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
 import { db, auth } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
 
-export const AddWordForm = () => {
+export default function AddWordForm({ onWordAdded }: { onWordAdded?: () => void }) {
   const [english, setEnglish] = useState("");
   const [spanish, setSpanish] = useState("");
 
-  const addWord = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     const user = auth.currentUser;
     if (!user || !english || !spanish) return;
 
-    const userWordsRef = collection(db, "users", user.uid, "words");
-
-    await addDoc(userWordsRef, {
-      english,
-      spanish,
+    const wordsRef = collection(db, "users", user.uid, "words");
+    await addDoc(wordsRef, {
+      english: english.trim(),
+      spanish: spanish.trim(),
       correctCount: 0,
-      lastSeen: Date.now()
+      lastSeen: 0,
     });
 
     setEnglish("");
     setSpanish("");
+
+    if (onWordAdded) onWordAdded(); // ✅ trigger refresh in parent
   };
 
   return (
-    <div>
-      <h2>Add New Word</h2>
+    <form onSubmit={handleSubmit}>
       <input
+        type="text"
+        placeholder="English"
         value={english}
         onChange={(e) => setEnglish(e.target.value)}
-        placeholder="English"
+        required
       />
       <input
+        type="text"
+        placeholder="Spanish"
         value={spanish}
         onChange={(e) => setSpanish(e.target.value)}
-        placeholder="Spanish"
+        required
       />
-      <button onClick={addWord}>Add Word</button>
-    </div>
+      <button type="submit">Add Word</button>
+    </form>
   );
-};
+}
