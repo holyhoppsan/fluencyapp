@@ -25,7 +25,6 @@ export const AddWordForm = () => {
 
   return (
     <div>
-      <h2>Add New Word</h2>
       <input
         value={english}
         onChange={(e) => setEnglish(e.target.value)}

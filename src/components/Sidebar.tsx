@@ -13,6 +13,9 @@ export const Sidebar = () => {
         <NavLink to="/stats" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
           Stats
         </NavLink>
+        <NavLink to="/add" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+          Add Word
+        </NavLink>
         <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
           Profile
         </NavLink>

@@ -6,6 +6,7 @@ import Home from "../routes/Home";
 import Practice from "../routes/Practice";
 import Stats from "../routes/Stats";
 import Profile from "../routes/Profile";
+import AddWord from "../routes/AddWord"; // updated import
 import "./Navbar.css";
 import "./Layout.css";
 
@@ -23,6 +24,7 @@ export const Layout = ({ user }: { user: any }) => {
             <Route path="/home" element={<Home />} />
             <Route path="/practice" element={<Practice />} />
             <Route path="/stats" element={<Stats />} />
+            <Route path="/add" element={<AddWord />} />
             <Route path="/profile" element={<Profile />} />
           </Routes>
         </main>
