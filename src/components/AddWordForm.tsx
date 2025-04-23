@@ -2,7 +2,7 @@ import { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 
-export const AddWordForm = () => {
+export const AddWordForm = ({ onWordAdded }: { onWordAdded?: () => void }) => {
   const [english, setEnglish] = useState("");
   const [spanish, setSpanish] = useState("");
 
@@ -21,10 +21,11 @@ export const AddWordForm = () => {
 
     setEnglish("");
     setSpanish("");
+    onWordAdded?.(); // 🔔 Notify parent
   };
 
   return (
-    <div>
+    <div style={{ marginBottom: "1rem" }}>
       <input
         value={english}
         onChange={(e) => setEnglish(e.target.value)}

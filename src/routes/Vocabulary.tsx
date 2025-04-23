@@ -4,19 +4,16 @@ import {
   getDocs,
   updateDoc,
   doc,
-  addDoc,
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { WordEntry } from "../types";
+import { AddWordForm } from "../components/AddWordForm";
 
 export default function Vocabulary() {
   const [words, setWords] = useState<WordEntry[]>([]);
   const [editWordId, setEditWordId] = useState<string | null>(null);
   const [editedEnglish, setEditedEnglish] = useState("");
   const [editedSpanish, setEditedSpanish] = useState("");
-
-  const [newEnglish, setNewEnglish] = useState("");
-  const [newSpanish, setNewSpanish] = useState("");
 
   useEffect(() => {
     fetchWords();
@@ -56,42 +53,12 @@ export default function Vocabulary() {
     setEditWordId(null);
   };
 
-  const addWord = async () => {
-    const user = auth.currentUser;
-    if (!user || !newEnglish || !newSpanish) return;
-
-    const userWordsRef = collection(db, "users", user.uid, "words");
-
-    await addDoc(userWordsRef, {
-      english: newEnglish,
-      spanish: newSpanish,
-      correctCount: 0,
-      lastSeen: Date.now(),
-    });
-
-    setNewEnglish("");
-    setNewSpanish("");
-    await fetchWords();
-  };
-
   return (
     <div>
       <h2>Vocabulary</h2>
 
       <h3>Add New Word</h3>
-      <div style={{ marginBottom: "1rem" }}>
-        <input
-          value={newEnglish}
-          onChange={(e) => setNewEnglish(e.target.value)}
-          placeholder="English"
-        />
-        <input
-          value={newSpanish}
-          onChange={(e) => setNewSpanish(e.target.value)}
-          placeholder="Spanish"
-        />
-        <button onClick={addWord}>Add Word</button>
-      </div>
+      <AddWordForm onWordAdded={fetchWords} />
 
       <h3>Your Words</h3>
       <table>
