@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { WordEntry } from "../types";
 import { PracticeOptions } from "./PracticeSetup";
 
+type WordWithDirection = WordEntry & { direction: "es-en" | "en-es" };
+
 type Props = {
   words: WordEntry[];
   options: PracticeOptions;
@@ -9,13 +11,28 @@ type Props = {
 };
 
 export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
+  const initializeWords = () => {
+    return words.map((word) => {
+      let direction: "es-en" | "en-es";
+      if (options.direction === "random") {
+        direction = Math.random() > 0.5 ? "es-en" : "en-es";
+      } else {
+        direction = options.direction;
+      }
+      return { ...word, direction };
+    });
+  };
+
+  const [sessionWords] = useState<WordWithDirection[]>(initializeWords());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [input, setInput] = useState("");
   const [score, setScore] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(options.mode === "timed" ? options.count * 60 : 0);
+  const [timeLeft, setTimeLeft] = useState(
+    options.mode === "timed" ? options.count * 60 : 0
+  );
 
-  const currentWord = words[currentIndex];
+  const currentWord = sessionWords[currentIndex];
 
   useEffect(() => {
     if (options.mode === "timed") {
@@ -34,25 +51,15 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
   }, [options]);
 
   const getPrompt = () => {
-    switch (options.direction) {
-      case "es-en":
-        return currentWord.spanish;
-      case "en-es":
-        return currentWord.english;
-      case "random":
-        return Math.random() > 0.5 ? currentWord.english : currentWord.spanish;
-    }
+    return currentWord.direction === "es-en"
+      ? currentWord.spanish
+      : currentWord.english;
   };
 
   const getAnswer = () => {
-    switch (options.direction) {
-      case "es-en":
-        return currentWord.english;
-      case "en-es":
-        return currentWord.spanish;
-      case "random":
-        return `${currentWord.english}|${currentWord.spanish}`;
-    }
+    return currentWord.direction === "es-en"
+      ? currentWord.english
+      : currentWord.spanish;
   };
 
   const checkAnswer = () => {
@@ -76,13 +83,16 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
   };
 
   if (!currentWord) {
-    return <div>✅ Session complete! Score: {score}/{words.length}</div>;
+    return <div>✅ Session complete! Score: {score}/{sessionWords.length}</div>;
   }
 
   return (
     <div>
       {options.mode === "timed" && (
-        <div>⏱ Time Left: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}</div>
+        <div>
+          ⏱ Time Left: {Math.floor(timeLeft / 60)}:
+          {String(timeLeft % 60).padStart(2, "0")}
+        </div>
       )}
 
       <h3>Translate:</h3>
@@ -101,7 +111,9 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
         </>
       ) : (
         <>
-          <p>Correct answer: <strong>{getAnswer()}</strong></p>
+          <p>
+            Correct answer: <strong>{getAnswer()}</strong>
+          </p>
           <button onClick={next}>Next</button>
         </>
       )}

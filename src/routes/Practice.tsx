@@ -11,35 +11,57 @@ export default function Practice() {
   const [complete, setComplete] = useState(false);
 
   useEffect(() => {
-    if (options) {
-      const fetchWords = async () => {
-        const user = auth.currentUser;
-        if (!user) return;
-        const snapshot = await getDocs(collection(db, "users", user.uid, "words"));
-        const allWords = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        })) as WordEntry[];
+    if (!options) return;
 
-        // TODO: Apply spaced repetition sorting here
+    const fetchWords = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
 
-        const selected = allWords.slice(0, options.count);
-        setWords(selected);
-      };
+      const snapshot = await getDocs(collection(db, "users", user.uid, "words"));
+      const allWords = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as WordEntry[];
 
-      fetchWords();
-    }
+      // TODO: Replace this with spaced repetition ranking
+      const shuffled = allWords.sort(() => Math.random() - 0.5);
+      const selected =
+        options.mode === "word-count"
+          ? shuffled.slice(0, options.count)
+          : shuffled;
+
+      setWords(selected);
+    };
+
+    fetchWords();
   }, [options]);
 
   if (!options) return <PracticeSetup onStart={setOptions} />;
 
   if (complete) {
-    return <div>✅ Practice Complete! <button onClick={() => { setOptions(null); setComplete(false); }}>Start New</button></div>;
+    return (
+      <div>
+        ✅ Practice Complete!
+        <button
+          onClick={() => {
+            setOptions(null);
+            setComplete(false);
+            setWords([]);
+          }}
+        >
+          Start New
+        </button>
+      </div>
+    );
   }
 
   return (
     <div>
-      <FlashcardPractice words={words} options={options} onComplete={() => setComplete(true)} />
+      {words.length > 0 ? (
+        <FlashcardPractice words={words} options={options} onComplete={() => setComplete(true)} />
+      ) : (
+        <p>Loading words...</p>
+      )}
     </div>
   );
 }
