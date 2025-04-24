@@ -26,7 +26,7 @@ export default function Vocabulary() {
         ...data,
         id: docSnap.id,
         srScore,
-      } as WordEntry & { id: string; srScore: number }; // ✅ enforce id as string
+      } as WordEntry & { id: string; srScore: number };
     });
 
     setWords(loadedWords);
@@ -38,7 +38,7 @@ export default function Vocabulary() {
 
   const handleEdit = async (id: string) => {
     const user = auth.currentUser;
-    if (!user || !id) return;
+    if (!user) return;
 
     const ref = doc(db, "users", user.uid, "words", id);
     await updateDoc(ref, {
@@ -68,58 +68,65 @@ export default function Vocabulary() {
             <th>Spanish</th>
             <th>English</th>
             <th>SR Score</th>
-            <th>Correct</th>
-            <th>Last Seen</th>
+            <th>Accuracy</th>
+            <th>History</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {words.map((word) => (
-            <tr key={word.id}>
-              <td>
-                {editingId === word.id ? (
-                  <input
-                    value={editSpanish}
-                    onChange={(e) => setEditSpanish(e.target.value)}
-                  />
-                ) : (
-                  word.spanish
-                )}
-              </td>
-              <td>
-                {editingId === word.id ? (
-                  <input
-                    value={editEnglish}
-                    onChange={(e) => setEditEnglish(e.target.value)}
-                  />
-                ) : (
-                  word.english
-                )}
-              </td>
-              <td>{Math.round(word.srScore)}</td>
-              <td>{word.correctCount ?? 0}</td>
-              <td>
-                {word.lastSeen
-                  ? new Date(word.lastSeen).toLocaleDateString()
-                  : "Never"}
-              </td>
-              <td>
-                {editingId === word.id ? (
-                  <button onClick={() => handleEdit(word.id)}>Save</button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setEditingId(word.id);
-                      setEditEnglish(word.english);
-                      setEditSpanish(word.spanish);
-                    }}
-                  >
-                    Edit
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {words.map((word) => {
+            const accuracy =
+              word.seenCount && word.correctCount
+                ? Math.round((word.correctCount / word.seenCount) * 100)
+                : "–";
+
+            return (
+              <tr key={word.id}>
+                <td>
+                  {editingId === word.id ? (
+                    <input
+                      value={editSpanish}
+                      onChange={(e) => setEditSpanish(e.target.value)}
+                    />
+                  ) : (
+                    word.spanish
+                  )}
+                </td>
+                <td>
+                  {editingId === word.id ? (
+                    <input
+                      value={editEnglish}
+                      onChange={(e) => setEditEnglish(e.target.value)}
+                    />
+                  ) : (
+                    word.english
+                  )}
+                </td>
+                <td>{Math.round(word.srScore)}</td>
+                <td>{typeof accuracy === "number" ? `${accuracy}%` : "–"}</td>
+                <td>
+                  {(word.history ?? []).map((result, i) => (
+                    <span key={i}>{result ? "✅" : "❌"}</span>
+                  ))}
+                </td>
+                <td>
+                  {editingId === word.id ? (
+                    <button onClick={() => handleEdit(word.id)}>Save</button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingId(word.id);
+                        setEditEnglish(word.english);
+                        setEditSpanish(word.spanish);
+                      }}
+                    >
+                      Edit
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
