@@ -40,9 +40,9 @@ export const StatsDashboard = () => {
       const totalCorrect = words.reduce((sum, w) => sum + (w.correctCount || 0), 0);
       const accuracy = total > 0 ? Math.round((totalCorrect / total) * 100) : 0;
 
-      const practicedToday = words.filter((w) => now - w.lastSeen < oneDay).length;
-      const practicedWeek = words.filter((w) => now - w.lastSeen < oneWeek).length;
-      const practicedMonth = words.filter((w) => now - w.lastSeen < oneMonth).length;
+      const practicedToday = words.filter((w) => now - (w.lastSeen || 0) < oneDay).length;
+      const practicedWeek = words.filter((w) => now - (w.lastSeen || 0) < oneWeek).length;
+      const practicedMonth = words.filter((w) => now - (w.lastSeen || 0) < oneMonth).length;
 
       setStats({
         total,
