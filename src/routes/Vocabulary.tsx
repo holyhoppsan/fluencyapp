@@ -19,12 +19,22 @@ export default function Vocabulary() {
 
     const loadedWords = snapshot.docs.map((docSnap) => {
       const data = docSnap.data() as WordEntry;
+
+      // ✅ Optional normalization logic (in-memory only for now)
+      let correctedSeen = data.seenCount ?? 0;
+      const correctedCorrect = data.correctCount ?? 0;
+      if (correctedSeen < correctedCorrect) {
+        correctedSeen = correctedCorrect;
+      }
+
       const lastSeen = data.lastSeen || 0;
-      const correctCount = data.correctCount || 0;
-      const srScore = (now - lastSeen) / (1 + correctCount);
+      const srScore = (now - lastSeen) / (1 + correctedCorrect);
+
       return {
         ...data,
         id: docSnap.id,
+        seenCount: correctedSeen,
+        correctCount: correctedCorrect,
         srScore,
       } as WordEntry & { id: string; srScore: number };
     });
@@ -75,9 +85,10 @@ export default function Vocabulary() {
         </thead>
         <tbody>
           {words.map((word) => {
+            const seen = Math.max(word.seenCount ?? 0, word.correctCount ?? 0);
             const accuracy =
-              word.seenCount && word.correctCount
-                ? Math.round((word.correctCount / word.seenCount) * 100)
+              seen > 0
+                ? Math.min(100, Math.round((word.correctCount ?? 0) / seen * 100))
                 : "–";
 
             return (
