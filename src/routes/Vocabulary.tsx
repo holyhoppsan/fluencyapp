@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { db, auth } from "../firebase";
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { WordEntry } from "../types";
@@ -10,7 +10,9 @@ export default function Vocabulary() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editEnglish, setEditEnglish] = useState("");
   const [editSpanish, setEditSpanish] = useState("");
+  const [importSuccessMessage, setImportSuccessMessage] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchWords = async () => {
     const user = auth.currentUser;
@@ -41,6 +43,13 @@ export default function Vocabulary() {
     fetchWords();
   }, []);
 
+  useEffect(() => {
+    if (location.state?.importSuccess) {
+      setImportSuccessMessage("✅ Vocabulary imported successfully!");
+      window.history.replaceState({}, document.title); // Clear navigation state
+    }
+  }, [location.state]);
+
   const handleEdit = async (id: string) => {
     const user = auth.currentUser;
     if (!user) return;
@@ -67,14 +76,30 @@ export default function Vocabulary() {
     if (!file) return;
 
     const text = await file.text();
-    const rows = text.split("\n").map((row) => row.trim()).filter(Boolean);
+    const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+
+    let rows = lines;
+
+    // Automatically skip header if detected
+    if (
+      lines.length > 0 &&
+      lines[0].toLowerCase().includes("english") &&
+      lines[0].toLowerCase().includes("spanish")
+    ) {
+      rows = lines.slice(1);
+    }
 
     const entries: { english: string; spanish: string }[] = [];
     const badRows: string[] = [];
 
     for (const row of rows) {
-      const parts = row.split(",").map((p) => p.trim());
-      if (parts.length !== 2 || parts.some((val) => !val || /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/.test(val))) {
+      const delimiter = row.includes(";") ? ";" : ","; // detect delimiter
+      const parts = row.split(delimiter).map((p) => p.trim());
+
+      if (
+        parts.length !== 2 ||
+        parts.some((val) => !val || /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/.test(val))
+      ) {
         badRows.push(row);
       } else {
         entries.push({ english: parts[0], spanish: parts[1] });
@@ -92,6 +117,19 @@ export default function Vocabulary() {
   return (
     <div>
       <h2>Add / Edit Vocabulary</h2>
+
+      {importSuccessMessage && (
+        <div style={{
+          background: "#d4edda",
+          color: "#155724",
+          padding: "1rem",
+          borderRadius: "4px",
+          marginBottom: "1rem"
+        }}>
+          {importSuccessMessage}
+        </div>
+      )}
+
       <AddWordForm onWordAdded={fetchWords} />
 
       <h3 style={{ marginTop: "2rem" }}>Import Vocab</h3>

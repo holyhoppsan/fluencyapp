@@ -6,9 +6,10 @@ import Home from "../routes/Home";
 import Practice from "../routes/Practice";
 import Profile from "../routes/Profile";
 import Vocabulary from "../routes/Vocabulary";
+import ImportPreview from "../routes/ImportPreview";
 import StatsLayout from "../routes/stats/StatsLayout";
 import StatsProgress from "../routes/stats/StatsProgress";
-import Maintenance from "../routes/Maintenance"; // ✅ New route
+import Maintenance from "../routes/Maintenance"; // ✅ Optional route
 import "./Navbar.css";
 import "./Layout.css";
 
@@ -26,8 +27,9 @@ export const Layout = ({ user }: { user: any }) => {
             <Route path="/home" element={<Home />} />
             <Route path="/practice" element={<Practice />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
+            <Route path="/vocabulary/import-preview" element={<ImportPreview />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/maintenance" element={<Maintenance />} /> {/* ✅ Added route */}
+            <Route path="/maintenance" element={<Maintenance />} />
 
             <Route path="/stats" element={<StatsLayout />}>
               <Route index element={<Navigate to="progress" />} />
