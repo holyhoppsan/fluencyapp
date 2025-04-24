@@ -71,13 +71,17 @@ export default function Practice() {
       }
 
       const ref = doc(db, "users", user.uid, "words", word.id);
+      const wasCorrect = correctWords.includes(word.id);
+
       const updates: Partial<WordEntry> = {
         lastSeen: now,
+        seenCount: (word.seenCount || 0) + 1,
+        correctCount: wasCorrect ? (word.correctCount || 0) + 1 : word.correctCount || 0,
+        history: [
+          ...(word.history ?? []),
+          wasCorrect,
+        ].slice(-5),
       };
-
-      if (correctWords.includes(word.id)) {
-        updates.correctCount = (word.correctCount || 0) + 1;
-      }
 
       batch.update(ref, updates);
     });

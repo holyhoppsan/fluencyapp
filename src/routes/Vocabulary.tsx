@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { db, auth } from "../firebase";
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { WordEntry } from "../types";
@@ -9,6 +10,9 @@ export default function Vocabulary() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editEnglish, setEditEnglish] = useState("");
   const [editSpanish, setEditSpanish] = useState("");
+  const [importSuccessMessage, setImportSuccessMessage] = useState("");
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchWords = async () => {
     const user = auth.currentUser;
@@ -22,11 +26,14 @@ export default function Vocabulary() {
       const lastSeen = data.lastSeen || 0;
       const correctCount = data.correctCount || 0;
       const srScore = (now - lastSeen) / (1 + correctCount);
+
       return {
         ...data,
         id: docSnap.id,
+        seenCount: data.seenCount ?? correctCount,
+        correctCount,
         srScore,
-      } as WordEntry & { id: string; srScore: number }; // ✅ enforce id as string
+      };
     });
 
     setWords(loadedWords);
@@ -36,9 +43,16 @@ export default function Vocabulary() {
     fetchWords();
   }, []);
 
+  useEffect(() => {
+    if (location.state?.importSuccess) {
+      setImportSuccessMessage("✅ Vocabulary imported successfully!");
+      window.history.replaceState({}, document.title); // Clear navigation state
+    }
+  }, [location.state]);
+
   const handleEdit = async (id: string) => {
     const user = auth.currentUser;
-    if (!user || !id) return;
+    if (!user) return;
 
     const ref = doc(db, "users", user.uid, "words", id);
     await updateDoc(ref, {
@@ -57,10 +71,79 @@ export default function Vocabulary() {
     setEditSpanish("");
   };
 
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+
+    let rows = lines;
+
+    // Automatically skip header if detected
+    if (
+      lines.length > 0 &&
+      lines[0].toLowerCase().includes("english") &&
+      lines[0].toLowerCase().includes("spanish")
+    ) {
+      rows = lines.slice(1);
+    }
+
+    const entries: { english: string; spanish: string }[] = [];
+    const badRows: string[] = [];
+
+    for (const row of rows) {
+      const delimiter = row.includes(";") ? ";" : ","; // detect delimiter
+      const parts = row.split(delimiter).map((p) => p.trim());
+
+      if (
+        parts.length !== 2 ||
+        parts.some((val) => !val || /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/.test(val))
+      ) {
+        badRows.push(row);
+      } else {
+        entries.push({ english: parts[0], spanish: parts[1] });
+      }
+    }
+
+    if (badRows.length > 0) {
+      alert("Invalid CSV format. Please ensure the file has exactly 2 columns and only contains valid Spanish/English characters.");
+      return;
+    }
+
+    navigate("/vocabulary/import-preview", { state: { parsedEntries: entries } });
+  };
+
   return (
     <div>
       <h2>Add / Edit Vocabulary</h2>
+
+      {importSuccessMessage && (
+        <div style={{
+          background: "#d4edda",
+          color: "#155724",
+          padding: "1rem",
+          borderRadius: "4px",
+          marginBottom: "1rem"
+        }}>
+          {importSuccessMessage}
+        </div>
+      )}
+
       <AddWordForm onWordAdded={fetchWords} />
+
+      <h3 style={{ marginTop: "2rem" }}>Import Vocab</h3>
+      <input
+        type="file"
+        accept=".csv"
+        style={{ display: "none" }}
+        id="csvInput"
+        onChange={handleCSVImport}
+      />
+      <button onClick={() => document.getElementById("csvInput")?.click()}>
+        Import Vocabulary from CSV
+      </button>
+
       <h3 style={{ marginTop: "2rem" }}>Your Words</h3>
       <table>
         <thead>
@@ -68,58 +151,66 @@ export default function Vocabulary() {
             <th>Spanish</th>
             <th>English</th>
             <th>SR Score</th>
-            <th>Correct</th>
-            <th>Last Seen</th>
+            <th>Accuracy</th>
+            <th>History</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {words.map((word) => (
-            <tr key={word.id}>
-              <td>
-                {editingId === word.id ? (
-                  <input
-                    value={editSpanish}
-                    onChange={(e) => setEditSpanish(e.target.value)}
-                  />
-                ) : (
-                  word.spanish
-                )}
-              </td>
-              <td>
-                {editingId === word.id ? (
-                  <input
-                    value={editEnglish}
-                    onChange={(e) => setEditEnglish(e.target.value)}
-                  />
-                ) : (
-                  word.english
-                )}
-              </td>
-              <td>{Math.round(word.srScore)}</td>
-              <td>{word.correctCount ?? 0}</td>
-              <td>
-                {word.lastSeen
-                  ? new Date(word.lastSeen).toLocaleDateString()
-                  : "Never"}
-              </td>
-              <td>
-                {editingId === word.id ? (
-                  <button onClick={() => handleEdit(word.id)}>Save</button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setEditingId(word.id);
-                      setEditEnglish(word.english);
-                      setEditSpanish(word.spanish);
-                    }}
-                  >
-                    Edit
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {words.map((word) => {
+            const seen = Math.max(word.seenCount ?? 0, word.correctCount ?? 0);
+            const accuracy =
+              seen > 0
+                ? Math.min(100, Math.round((word.correctCount ?? 0) / seen * 100))
+                : "–";
+
+            return (
+              <tr key={word.id}>
+                <td>
+                  {editingId === word.id ? (
+                    <input
+                      value={editSpanish}
+                      onChange={(e) => setEditSpanish(e.target.value)}
+                    />
+                  ) : (
+                    word.spanish
+                  )}
+                </td>
+                <td>
+                  {editingId === word.id ? (
+                    <input
+                      value={editEnglish}
+                      onChange={(e) => setEditEnglish(e.target.value)}
+                    />
+                  ) : (
+                    word.english
+                  )}
+                </td>
+                <td>{Math.round(word.srScore)}</td>
+                <td>{typeof accuracy === "number" ? `${accuracy}%` : "–"}</td>
+                <td>
+                  {(word.history ?? []).map((result, i) => (
+                    <span key={i}>{result ? "✅" : "❌"}</span>
+                  ))}
+                </td>
+                <td>
+                  {editingId === word.id ? (
+                    <button onClick={() => handleEdit(word.id)}>Save</button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingId(word.id);
+                        setEditEnglish(word.english);
+                        setEditSpanish(word.spanish);
+                      }}
+                    >
+                      Edit
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { WordEntry } from "../types";
 import { PracticeOptions } from "./PracticeSetup";
 
@@ -36,7 +36,15 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
     options.mode === "timed" ? options.count * 60 : 0
   );
 
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const currentWord = sessionWords[currentIndex];
+
+  useEffect(() => {
+    if (!showAnswer && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [currentIndex, showAnswer]);
 
   useEffect(() => {
     if (options.mode === "timed") {
@@ -118,15 +126,26 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
         <strong>{getPrompt()}</strong>
       </div>
 
+      <input
+        ref={inputRef}
+        autoFocus
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (!showAnswer) {
+              checkAnswer();
+            } else {
+              next();
+            }
+          }
+        }}
+        placeholder="Your answer"
+      />
+
       {!showAnswer ? (
-        <>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Your answer"
-          />
-          <button onClick={checkAnswer}>Check</button>
-        </>
+        <button onClick={checkAnswer}>Check</button>
       ) : (
         <>
           <h4 style={{ color: wasCorrect ? "green" : "red" }}>
