@@ -128,6 +128,7 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
 
       <input
         ref={inputRef}
+        autoFocus
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
