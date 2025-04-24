@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { WordEntry } from "../types";
 import { PracticeOptions } from "./PracticeSetup";
 
@@ -36,7 +36,15 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
     options.mode === "timed" ? options.count * 60 : 0
   );
 
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const currentWord = sessionWords[currentIndex];
+
+  useEffect(() => {
+    if (!showAnswer && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [currentIndex, showAnswer]);
 
   useEffect(() => {
     if (options.mode === "timed") {
@@ -121,8 +129,15 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
       {!showAnswer ? (
         <>
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                checkAnswer();
+              }
+            }}
             placeholder="Your answer"
           />
           <button onClick={checkAnswer}>Check</button>
