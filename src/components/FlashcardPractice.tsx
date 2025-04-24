@@ -126,22 +126,25 @@ export const FlashcardPractice = ({ words, options, onComplete }: Props) => {
         <strong>{getPrompt()}</strong>
       </div>
 
+      <input
+        ref={inputRef}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (!showAnswer) {
+              checkAnswer();
+            } else {
+              next();
+            }
+          }
+        }}
+        placeholder="Your answer"
+      />
+
       {!showAnswer ? (
-        <>
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                checkAnswer();
-              }
-            }}
-            placeholder="Your answer"
-          />
-          <button onClick={checkAnswer}>Check</button>
-        </>
+        <button onClick={checkAnswer}>Check</button>
       ) : (
         <>
           <h4 style={{ color: wasCorrect ? "green" : "red" }}>
