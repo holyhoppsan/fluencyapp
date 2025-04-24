@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { db, auth } from "../firebase";
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { WordEntry } from "../types";
@@ -9,6 +10,7 @@ export default function Vocabulary() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editEnglish, setEditEnglish] = useState("");
   const [editSpanish, setEditSpanish] = useState("");
+  const navigate = useNavigate();
 
   const fetchWords = async () => {
     const user = auth.currentUser;
@@ -19,24 +21,17 @@ export default function Vocabulary() {
 
     const loadedWords = snapshot.docs.map((docSnap) => {
       const data = docSnap.data() as WordEntry;
-
-      // ✅ Optional normalization logic (in-memory only for now)
-      let correctedSeen = data.seenCount ?? 0;
-      const correctedCorrect = data.correctCount ?? 0;
-      if (correctedSeen < correctedCorrect) {
-        correctedSeen = correctedCorrect;
-      }
-
       const lastSeen = data.lastSeen || 0;
-      const srScore = (now - lastSeen) / (1 + correctedCorrect);
+      const correctCount = data.correctCount || 0;
+      const srScore = (now - lastSeen) / (1 + correctCount);
 
       return {
         ...data,
         id: docSnap.id,
-        seenCount: correctedSeen,
-        correctCount: correctedCorrect,
+        seenCount: data.seenCount ?? correctCount,
+        correctCount,
         srScore,
-      } as WordEntry & { id: string; srScore: number };
+      };
     });
 
     setWords(loadedWords);
@@ -67,10 +62,50 @@ export default function Vocabulary() {
     setEditSpanish("");
   };
 
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const rows = text.split("\n").map((row) => row.trim()).filter(Boolean);
+
+    const entries: { english: string; spanish: string }[] = [];
+    const badRows: string[] = [];
+
+    for (const row of rows) {
+      const parts = row.split(",").map((p) => p.trim());
+      if (parts.length !== 2 || parts.some((val) => !val || /[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\s]/.test(val))) {
+        badRows.push(row);
+      } else {
+        entries.push({ english: parts[0], spanish: parts[1] });
+      }
+    }
+
+    if (badRows.length > 0) {
+      alert("Invalid CSV format. Please ensure the file has exactly 2 columns and only contains valid Spanish/English characters.");
+      return;
+    }
+
+    navigate("/vocabulary/import-preview", { state: { parsedEntries: entries } });
+  };
+
   return (
     <div>
       <h2>Add / Edit Vocabulary</h2>
       <AddWordForm onWordAdded={fetchWords} />
+
+      <h3 style={{ marginTop: "2rem" }}>Import Vocab</h3>
+      <input
+        type="file"
+        accept=".csv"
+        style={{ display: "none" }}
+        id="csvInput"
+        onChange={handleCSVImport}
+      />
+      <button onClick={() => document.getElementById("csvInput")?.click()}>
+        Import Vocabulary from CSV
+      </button>
+
       <h3 style={{ marginTop: "2rem" }}>Your Words</h3>
       <table>
         <thead>
